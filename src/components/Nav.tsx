@@ -13,7 +13,6 @@ export default function Nav({ page, setPage, onSearch, savedCount }: NavProps) {
   const navLinks: { label: string; id: Page }[] = [
     { label: "Discover", id: "discover" },
     { label: "Browse", id: "browse" },
-    { label: "Categories", id: "categories" },
   ];
 
   const go = (event: MouseEvent<HTMLAnchorElement>, next: Page) => {

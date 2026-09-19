@@ -4,7 +4,6 @@ export type Page =
   | "discover"
   | "browse"
   | "movie-detail"
-  | "categories"
   | "saved"
   | "policies";
 

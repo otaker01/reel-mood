@@ -11,7 +11,6 @@ const PAGE_PATHS: Record<Exclude<Page, "movie-detail">, string> = {
   home: "/",
   discover: "/discover",
   browse: "/browse",
-  categories: "/categories",
   saved: "/saved",
   recommendations: "/recommendations",
   policies: "/policies",

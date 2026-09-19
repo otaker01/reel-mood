@@ -16,7 +16,6 @@ import Recommendations from "./pages/Recommendations";
 import Discover from "./pages/Discover";
 import Browse from "./pages/Browse";
 import MovieDetail from "./pages/MovieDetail";
-import Categories from "./pages/Categories";
 import Saved from "./pages/Saved";
 import Policies from "./pages/Policies";
 
@@ -186,14 +185,6 @@ export default function App() {
       });
   };
 
-  const handleCategorySelect = (mood: string) => {
-    setFilters({ ...defaultFilters, moods: [mood] });
-    setPage("home");
-    setSelectedMovieId(null);
-    pushRoute("home");
-    window.scrollTo({ top: 0 });
-  };
-
   const handleBack = () => {
     if (window.history.state?.internal) {
       window.history.back();
@@ -276,10 +267,6 @@ export default function App() {
             onMovieClick={goToMovie}
             onBack={handleBack}
           />
-        )}
-
-        {page === "categories" && (
-          <Categories onCategorySelect={handleCategorySelect} />
         )}
 
         {page === "saved" && (
