@@ -14,6 +14,7 @@ const PAGE_PATHS: Record<Exclude<Page, "movie-detail">, string> = {
   categories: "/categories",
   saved: "/saved",
   recommendations: "/recommendations",
+  policies: "/policies",
 };
 
 function basePathname(): string {

@@ -5,7 +5,8 @@ export type Page =
   | "browse"
   | "movie-detail"
   | "categories"
-  | "saved";
+  | "saved"
+  | "policies";
 
 export interface CastMember {
   name: string;

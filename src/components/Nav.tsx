@@ -29,14 +29,14 @@ export default function Nav({ page, setPage, onSearch, savedCount }: NavProps) {
         <a
           href={hrefFor("home")}
           onClick={(event) => go(event, "home")}
-          className="flex items-center gap-2 shrink-0 group"
+          className="flex items-center shrink-0 group"
+          aria-label="MoovieMatch home"
         >
-          <div className="w-8 h-8 rounded-lg bg-flame flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-flame/30">
-            R
-          </div>
-          <span className="font-display font-semibold text-lg text-white tracking-tight leading-none truncate">
-            ReelMood
-          </span>
+          <img
+            src="/mm%20logo%20full%20(1).svg"
+            alt="MoovieMatch"
+            className="h-7 sm:h-8 w-auto max-w-[min(200px,48vw)]"
+          />
         </a>
 
         {/* Center nav links — hidden on mobile */}

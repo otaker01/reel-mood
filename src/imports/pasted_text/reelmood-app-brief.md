@@ -1,4 +1,4 @@
-Create a complete modern web application called "ReelMood" — an intelligent movie recommendation and discovery platform that helps users find movies based on their current mood, preferences, situation, genres, and viewing habits.
+Create a complete modern web application called "MoovieMatch" — an intelligent movie recommendation and discovery platform that helps users find movies based on their current mood, preferences, situation, genres, and viewing habits.
 
 The platform should feel cinematic, premium, modern, and highly visual. It should not look like a traditional movie database. The main focus is helping users answer:
 
@@ -121,7 +121,7 @@ NAVIGATION
 Create a sticky top navigation.
 
 Left:
-Logo icon + ReelMood
+Logo icon + MoovieMatch
 
 Center navigation:
 Discover

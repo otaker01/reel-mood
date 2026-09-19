@@ -7,6 +7,7 @@ import { loadSavedMovies, persistSavedMovies } from "./lib/storage";
 
 import Nav from "./components/Nav";
 import MobileNav from "./components/MobileNav";
+import Footer from "./components/Footer";
 import SearchOverlay from "./components/SearchOverlay";
 import LoadingScreen from "./components/LoadingScreen";
 
@@ -17,6 +18,7 @@ import Browse from "./pages/Browse";
 import MovieDetail from "./pages/MovieDetail";
 import Categories from "./pages/Categories";
 import Saved from "./pages/Saved";
+import Policies from "./pages/Policies";
 
 const initialRoute = parseLocation();
 const initialSaved = loadSavedMovies();
@@ -204,7 +206,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen min-w-0 max-w-full" style={{ backgroundColor: "#0A0A0B", color: "#ffffff", fontFamily: "'Outfit', sans-serif" }}>
+    <div className="min-h-screen min-w-0 max-w-full flex flex-col" style={{ backgroundColor: "#0A0A0B", color: "#ffffff", fontFamily: "'Outfit', sans-serif" }}>
       {isLoading && <LoadingScreen />}
 
       {loadError && (
@@ -228,7 +230,7 @@ export default function App() {
         savedCount={savedMovies.size}
       />
 
-      <main className="min-h-screen min-w-0 max-w-full">
+      <main className="flex-1 min-w-0 max-w-full">
         {page === "home" && (
           <Home
             filters={filters}
@@ -288,7 +290,11 @@ export default function App() {
           />
         )}
 
+        {page === "policies" && <Policies />}
+
       </main>
+
+      <Footer setPage={navigate} />
 
       <MobileNav
         page={page}
