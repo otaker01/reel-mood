@@ -15,7 +15,7 @@ export default function Footer({ setPage }: FooterProps) {
   };
 
   return (
-    <footer className="relative z-[45] border-t border-rim bg-surface pb-24 md:pb-8">
+    <footer className="border-t border-rim bg-surface pb-24 md:pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 flex flex-col gap-8">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-8">
           <div className="min-w-0">
