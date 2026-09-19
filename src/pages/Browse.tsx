@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
-import { MOVIES } from "../data/movies";
+import { useState, useEffect } from "react";
+import { browseMovies } from "../lib/tmdb";
+import type { Movie } from "../types";
 import MovieCard from "../components/MovieCard";
 
 interface BrowseProps {
@@ -24,47 +25,53 @@ const DURATION_OPTIONS = [
 
 export default function Browse({ savedMovies, onToggleSave, onMovieClick }: BrowseProps) {
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [genre, setGenre] = useState("All");
   const [sortBy, setSortBy] = useState("rating");
   const [duration, setDuration] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [movies, setMovies] = useState<Movie[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filtered = useMemo(() => {
-    let results = [...MOVIES];
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query), 350);
+    return () => clearTimeout(t);
+  }, [query]);
 
-    if (query.trim()) {
-      const q = query.toLowerCase();
-      results = results.filter(
-        (m) =>
-          m.title.toLowerCase().includes(q) ||
-          m.director.toLowerCase().includes(q) ||
-          m.genres.some((g) => g.toLowerCase().includes(q))
-      );
-    }
-
-    if (genre !== "All") {
-      results = results.filter((m) => m.genres.includes(genre));
-    }
-
-    if (duration === "short") results = results.filter((m) => m.durationMins < 90);
-    else if (duration === "medium") results = results.filter((m) => m.durationMins >= 90 && m.durationMins <= 120);
-    else if (duration === "long") results = results.filter((m) => m.durationMins > 120);
-
-    if (sortBy === "rating") results.sort((a, b) => b.rating - a.rating);
-    else if (sortBy === "newest") results.sort((a, b) => b.year - a.year);
-    else if (sortBy === "oldest") results.sort((a, b) => a.year - b.year);
-
-    return results;
-  }, [query, genre, sortBy, duration]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const results = await browseMovies({
+          query: debouncedQuery,
+          genre,
+          sortBy,
+          duration,
+        });
+        if (!cancelled) setMovies(results);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load movies");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedQuery, genre, sortBy, duration]);
 
   return (
-    <div className="min-h-screen pt-20 max-w-6xl mx-auto px-4 sm:px-6 pb-24">
+    <div className="min-h-screen pt-20 max-w-6xl mx-auto px-4 sm:px-6 pb-24 min-w-0 w-full">
       <div className="pt-8 pb-6">
         <h1 className="font-display text-3xl sm:text-4xl font-semibold text-white mb-1">Browse Movies</h1>
-        <p className="text-smoke text-sm">{filtered.length} movies found</p>
+        <p className="text-smoke text-sm">
+          {loading ? "Loading…" : `${movies.length} movies found`}
+        </p>
       </div>
 
-      {/* Search bar */}
       <div className="relative mb-5">
         <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-smoke pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <circle cx="11" cy="11" r="8" />
@@ -79,7 +86,6 @@ export default function Browse({ savedMovies, onToggleSave, onMovieClick }: Brow
         />
       </div>
 
-      {/* Genre pills */}
       <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 mb-4">
         {ALL_GENRES.map((g) => (
           <button
@@ -96,11 +102,10 @@ export default function Browse({ savedMovies, onToggleSave, onMovieClick }: Brow
         ))}
       </div>
 
-      {/* Filters toggle */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2 text-smoke text-sm hover:text-white transition-colors"
+          className="flex items-center gap-2 text-smoke text-sm hover:text-white transition-colors self-start"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
@@ -110,12 +115,12 @@ export default function Browse({ savedMovies, onToggleSave, onMovieClick }: Brow
             <span className="w-2 h-2 rounded-full bg-flame" />
           )}
         </button>
-        <div className="flex items-center gap-2">
-          <span className="text-smoke/60 text-xs">Sort:</span>
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-smoke/60 text-xs shrink-0">Sort:</span>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="bg-card border border-rim rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-flame/40"
+            className="bg-card border border-rim rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-flame/40 max-w-full"
           >
             {SORT_OPTIONS.map((opt) => (
               <option key={opt.id} value={opt.id}>{opt.label}</option>
@@ -124,7 +129,6 @@ export default function Browse({ savedMovies, onToggleSave, onMovieClick }: Brow
         </div>
       </div>
 
-      {/* Advanced filters panel */}
       {showFilters && (
         <div className="mb-6 p-5 bg-card rounded-2xl border border-rim">
           <div>
@@ -148,10 +152,17 @@ export default function Browse({ savedMovies, onToggleSave, onMovieClick }: Brow
         </div>
       )}
 
-      {/* Grid */}
-      {filtered.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-          {filtered.map((movie) => (
+      {error && <p className="text-red-300 text-sm mb-4">{error}</p>}
+
+      {loading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-5">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <div key={i} className="aspect-[2/3] min-w-0 rounded-2xl bg-card animate-pulse" />
+          ))}
+        </div>
+      ) : movies.length > 0 ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-5">
+          {movies.map((movie) => (
             <MovieCard
               key={movie.id}
               movie={movie}
@@ -159,7 +170,7 @@ export default function Browse({ savedMovies, onToggleSave, onMovieClick }: Brow
               onToggleSave={onToggleSave}
               isSaved={savedMovies.has(movie.id)}
               showMatch={false}
-              size="md"
+              fluid
             />
           ))}
         </div>

@@ -1,7 +1,9 @@
-import { useState } from "react";
-import type { Page, Filters } from "./types";
+import { useState, useEffect, useRef } from "react";
+import type { Page, Filters, Movie } from "./types";
 import { defaultFilters } from "./types";
-import { getRecommendations } from "./data/movies";
+import { fetchRecommendations, fetchMovieDetail, getCachedMovie, cacheMovies } from "./lib/tmdb";
+import { hrefFor, parseLocation } from "./lib/routing";
+import { loadSavedMovies, persistSavedMovies } from "./lib/storage";
 
 import Nav from "./components/Nav";
 import MobileNav from "./components/MobileNav";
@@ -16,54 +18,201 @@ import MovieDetail from "./pages/MovieDetail";
 import Categories from "./pages/Categories";
 import Saved from "./pages/Saved";
 
+const initialRoute = parseLocation();
+const initialSaved = loadSavedMovies();
+cacheMovies(initialSaved);
+
 export default function App() {
-  const [page, setPage] = useState<Page>("home");
-  const [filters, setFilters] = useState<Filters>(defaultFilters);
-  const [savedMovies, setSavedMovies] = useState<Set<number>>(new Set());
-  const [selectedMovieId, setSelectedMovieId] = useState<number | null>(null);
+  const [page, setPage] = useState<Page>(initialRoute.page);
+  const [filters, setFilters] = useState<Filters>(
+    initialRoute.page === "recommendations" ? initialRoute.filters : defaultFilters,
+  );
+  const [savedMovies, setSavedMovies] = useState<Set<number>>(() => new Set(initialSaved.map((m) => m.id)));
+  const [savedMovieData, setSavedMovieData] = useState<Movie[]>(initialSaved);
+  const [selectedMovieId, setSelectedMovieId] = useState<number | null>(initialRoute.movieId);
   const [showSearch, setShowSearch] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [recommendations, setRecommendations] = useState<(Movie & { match: number })[]>([]);
+  const [recsLoading, setRecsLoading] = useState(() => initialRoute.page === "recommendations");
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const skipNextRecFetch = useRef(false);
+  const savedMoviesRef = useRef(savedMovies);
+  savedMoviesRef.current = savedMovies;
 
-  const handleDiscover = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setPage("recommendations");
+  useEffect(() => {
+    window.history.replaceState(
+      { page: initialRoute.page, movieId: initialRoute.movieId },
+      "",
+      window.location.pathname + window.location.search,
+    );
+  }, []);
+
+  useEffect(() => {
+    persistSavedMovies(savedMovieData);
+    cacheMovies(savedMovieData);
+  }, [savedMovieData]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      const route = parseLocation();
+      setPage(route.page);
+      setSelectedMovieId(route.movieId);
+      if (route.page === "recommendations") {
+        setFilters(route.filters);
+      }
       window.scrollTo({ top: 0 });
-    }, 2600);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  const pushRoute = (nextPage: Page, movieId: number | null = null, nextFilters?: Filters) => {
+    const url = hrefFor(nextPage, movieId, nextPage === "recommendations" ? (nextFilters ?? filters) : undefined);
+    window.history.pushState({ page: nextPage, movieId, internal: true }, "", url);
   };
+
+  const replaceRoute = (nextPage: Page, movieId: number | null = null, nextFilters?: Filters) => {
+    const url = hrefFor(nextPage, movieId, nextPage === "recommendations" ? (nextFilters ?? filters) : undefined);
+    window.history.replaceState({ page: nextPage, movieId }, "", url);
+  };
+
+  const navigate = (p: Page) => {
+    setPage(p);
+    if (p !== "movie-detail") setSelectedMovieId(null);
+    pushRoute(p);
+    window.scrollTo({ top: 0 });
+  };
+
+  const handleDiscover = async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    const minDelay = new Promise((r) => setTimeout(r, 1200));
+    try {
+      const [movies] = await Promise.all([fetchRecommendations(filters), minDelay]);
+      skipNextRecFetch.current = true;
+      setRecommendations(movies);
+      setRecsLoading(false);
+      setPage("recommendations");
+      setSelectedMovieId(null);
+      pushRoute("recommendations", null, filters);
+      window.scrollTo({ top: 0 });
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Failed to load recommendations");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (page !== "recommendations") return;
+    replaceRoute("recommendations", null, filters);
+    if (skipNextRecFetch.current) {
+      skipNextRecFetch.current = false;
+      setRecsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setRecsLoading(true);
+    (async () => {
+      try {
+        const movies = await fetchRecommendations(filters);
+        if (!cancelled) setRecommendations(movies);
+      } catch {
+        /* keep existing results */
+      } finally {
+        if (!cancelled) setRecsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [filters, page]);
 
   const goToMovie = (id: number) => {
     setSelectedMovieId(id);
     setPage("movie-detail");
+    pushRoute("movie-detail", id);
     window.scrollTo({ top: 0 });
   };
 
-  const toggleSave = (id: number) => {
+  const addSavedMovie = (movie: Movie) => {
+    cacheMovies([movie]);
     setSavedMovies((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      next.add(movie.id);
       return next;
     });
+    setSavedMovieData((list) => {
+      if (list.some((m) => m.id === movie.id)) return list;
+      return [...list, movie];
+    });
+  };
+
+  const toggleSave = (id: number) => {
+    if (savedMovies.has(id)) {
+      setSavedMovies((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      setSavedMovieData((list) => list.filter((m) => m.id !== id));
+      return;
+    }
+
+    const cached = getCachedMovie(id);
+    if (cached) {
+      addSavedMovie(cached);
+      return;
+    }
+
+    setSavedMovies((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+    fetchMovieDetail(id)
+      .then((movie) => {
+        if (!savedMoviesRef.current.has(id)) return;
+        addSavedMovie(movie);
+      })
+      .catch(() => {
+        setSavedMovies((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      });
   };
 
   const handleCategorySelect = (mood: string) => {
     setFilters({ ...defaultFilters, moods: [mood] });
     setPage("home");
+    setSelectedMovieId(null);
+    pushRoute("home");
     window.scrollTo({ top: 0 });
   };
 
-  const recommendations = getRecommendations(filters);
-
-  const navigate = (p: Page) => {
-    setPage(p);
+  const handleBack = () => {
+    if (window.history.state?.internal) {
+      window.history.back();
+      return;
+    }
+    setPage("home");
+    setSelectedMovieId(null);
+    replaceRoute("home");
     window.scrollTo({ top: 0 });
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#0A0A0B", color: "#ffffff", fontFamily: "'Outfit', sans-serif" }}>
+    <div className="min-h-screen min-w-0 max-w-full" style={{ backgroundColor: "#0A0A0B", color: "#ffffff", fontFamily: "'Outfit', sans-serif" }}>
       {isLoading && <LoadingScreen />}
+
+      {loadError && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[90] max-w-md w-[90%] bg-red-950/90 border border-red-500/40 text-red-100 text-sm rounded-xl px-4 py-3 shadow-xl">
+          {loadError}
+          <button className="ml-3 underline" onClick={() => setLoadError(null)}>Dismiss</button>
+        </div>
+      )}
 
       {showSearch && (
         <SearchOverlay
@@ -79,7 +228,7 @@ export default function App() {
         savedCount={savedMovies.size}
       />
 
-      <main className="min-h-screen">
+      <main className="min-h-screen min-w-0 max-w-full">
         {page === "home" && (
           <Home
             filters={filters}
@@ -97,6 +246,7 @@ export default function App() {
             onToggleSave={toggleSave}
             onMovieClick={goToMovie}
             onAdjustFilters={() => navigate("home")}
+            loading={recsLoading}
           />
         )}
 
@@ -122,10 +272,7 @@ export default function App() {
             savedMovies={savedMovies}
             onToggleSave={toggleSave}
             onMovieClick={goToMovie}
-            onBack={() => {
-              setPage(page === "movie-detail" ? "recommendations" : page);
-              window.scrollTo({ top: 0 });
-            }}
+            onBack={handleBack}
           />
         )}
 
@@ -135,7 +282,7 @@ export default function App() {
 
         {page === "saved" && (
           <Saved
-            savedMovies={savedMovies}
+            movies={savedMovieData}
             onMovieClick={goToMovie}
             onToggleSave={toggleSave}
           />

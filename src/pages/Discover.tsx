@@ -1,4 +1,6 @@
-import { MOVIES, DISCOVER_SECTIONS } from "../data/movies";
+import { useState, useEffect } from "react";
+import { DISCOVER_SECTIONS, fetchDiscoverSection } from "../lib/tmdb";
+import type { Movie } from "../types";
 import MovieCard from "../components/MovieCard";
 
 interface DiscoverProps {
@@ -7,44 +9,76 @@ interface DiscoverProps {
   onMovieClick: (id: number) => void;
 }
 
-const movieById = (id: number) => MOVIES.find((m) => m.id === id);
-
 export default function Discover({ savedMovies, onToggleSave, onMovieClick }: DiscoverProps) {
+  const [sections, setSections] = useState<Record<string, Movie[]>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const entries = await Promise.all(
+          DISCOVER_SECTIONS.map(async (section) => {
+            const movies = await fetchDiscoverSection(section);
+            return [section.id, movies] as const;
+          }),
+        );
+        if (!cancelled) setSections(Object.fromEntries(entries));
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load collections");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen pt-20 pb-24">
-      {/* Hero */}
+    <div className="min-h-screen pt-20 pb-24 min-w-0">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-8 pb-12">
         <div className="inline-flex items-center gap-2 bg-flame/10 border border-flame/20 rounded-full px-4 py-1.5 mb-4">
           <span className="text-flame text-sm font-medium">✦ Curated collections</span>
         </div>
-        <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-semibold text-white leading-tight">
+        <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-semibold text-white leading-tight break-words">
           Explore movies<br />
           <em className="italic font-light text-smoke">differently.</em>
         </h1>
         <p className="text-smoke text-lg mt-3 max-w-xl">
-          Hand-picked collections for every mood, moment, and mindset.
+          Live collections powered by TMDB for every mood, moment, and mindset.
         </p>
       </div>
 
-      {/* Sections */}
-      <div className="space-y-12 pb-8">
-        {DISCOVER_SECTIONS.map((section) => {
-          const sectionMovies = section.ids.map(movieById).filter(Boolean) as typeof MOVIES;
-          return (
-            <div key={section.id}>
-              <div className="max-w-6xl mx-auto px-4 sm:px-6 mb-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-white font-semibold text-lg sm:text-xl flex items-center gap-2">
-                    <span>{section.icon}</span>
-                    {section.label}
-                  </h2>
-                  <button className="text-smoke text-sm hover:text-white transition-colors">
-                    See all →
-                  </button>
+      {error && (
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 text-red-300 text-sm mb-8">{error}</div>
+      )}
+
+      {loading ? (
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-10">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-80 rounded-2xl bg-card/60 animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-12 pb-8">
+          {DISCOVER_SECTIONS.map((section) => {
+            const sectionMovies = sections[section.id] ?? [];
+            if (!sectionMovies.length) return null;
+            return (
+              <div key={section.id} className="max-w-6xl mx-auto px-4 sm:px-6">
+                <div className="mb-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-white font-semibold text-lg sm:text-xl flex items-center gap-2">
+                      <span>{section.icon}</span>
+                      {section.label}
+                    </h2>
+                  </div>
                 </div>
-              </div>
-              <div className="pl-4 sm:pl-6 md:pl-[max(1.5rem,calc((100vw-72rem)/2+1.5rem))]">
-                <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-3">
+                <div className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide pb-3 snap-x snap-mandatory -mx-1 px-1">
                   {sectionMovies.map((movie) => (
                     <MovieCard
                       key={movie.id}
@@ -56,17 +90,12 @@ export default function Discover({ savedMovies, onToggleSave, onMovieClick }: Di
                       size="lg"
                     />
                   ))}
-                  {/* See more ghost card */}
-                  <div className="w-52 shrink-0 h-80 rounded-2xl border border-rim bg-card/50 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-flame/30 hover:bg-card transition-colors">
-                    <span className="text-3xl">→</span>
-                    <span className="text-smoke text-sm font-medium px-4 text-center">See all {section.label}</span>
-                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -24,6 +24,13 @@ body {
   color: #ffffff;
   font-family: 'Outfit', sans-serif;
   -webkit-font-smoothing: antialiased;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+#root {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .scrollbar-hide {
@@ -80,4 +87,22 @@ body {
 
 .match-ring {
   background: conic-gradient(#FF5C35 var(--pct), rgba(255,92,53,0.12) 0);
+}
+
+@keyframes lightbox-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes lightbox-panel {
+  from { opacity: 0; transform: scale(0.96) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.lightbox-in {
+  animation: lightbox-in 0.2s ease-out forwards;
+}
+
+.lightbox-panel {
+  animation: lightbox-panel 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }

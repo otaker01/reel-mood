@@ -13,6 +13,8 @@ export interface CastMember {
   photo: string;
 }
 
+export type TrailerSite = "YouTube" | "Vimeo";
+
 export interface Movie {
   id: number;
   title: string;
@@ -30,11 +32,12 @@ export interface Movie {
   energyLevel: number;
   moodTags: string[];
   matchReasons: string[];
-  streamingOn: string[];
   cast: CastMember[];
   ageRating: string;
   era: string;
   match?: number;
+  trailerKey?: string;
+  trailerSite?: TrailerSite;
 }
 
 export interface Filters {

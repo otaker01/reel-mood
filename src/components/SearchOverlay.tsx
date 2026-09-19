@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { MOVIES } from "../data/movies";
+import { searchMovies, fetchTrending } from "../lib/tmdb";
 import type { Movie } from "../types";
 
 interface SearchOverlayProps {
@@ -13,27 +13,45 @@ const GENRES = ["Action", "Drama", "Comedy", "Horror", "Romance", "Sci-Fi", "Thr
 export default function SearchOverlay({ onClose, onMovieSelect }: SearchOverlayProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Movie[]>([]);
+  const [trending, setTrending] = useState<Movie[]>([]);
+  const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
+    let cancelled = false;
+    fetchTrending()
+      .then((movies) => {
+        if (!cancelled) setTrending(movies.slice(0, 4));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
     if (query.length < 2) {
       setResults([]);
+      setLoading(false);
       return;
     }
-    const q = query.toLowerCase();
-    setResults(
-      MOVIES.filter(
-        (m) =>
-          m.title.toLowerCase().includes(q) ||
-          m.genres.some((g) => g.toLowerCase().includes(q)) ||
-          m.director.toLowerCase().includes(q) ||
-          m.moods.some((mood) => mood.includes(q))
-      ).slice(0, 6)
-    );
+    let cancelled = false;
+    setLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const movies = await searchMovies(query);
+        if (!cancelled) setResults(movies.slice(0, 8));
+      } catch {
+        if (!cancelled) setResults([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
   }, [query]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -45,7 +63,6 @@ export default function SearchOverlay({ onClose, onMovieSelect }: SearchOverlayP
       className="fixed inset-0 z-[100] bg-void/95 backdrop-blur-xl flex flex-col"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      {/* Search bar */}
       <div className="pt-20 pb-4 px-4 sm:px-8 max-w-3xl mx-auto w-full">
         <div className="relative">
           <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-smoke pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -72,8 +89,9 @@ export default function SearchOverlay({ onClose, onMovieSelect }: SearchOverlayP
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 sm:px-8 max-w-3xl mx-auto w-full">
-        {/* Search results */}
-        {results.length > 0 ? (
+        {loading ? (
+          <p className="text-smoke text-sm py-8">Searching…</p>
+        ) : results.length > 0 ? (
           <div className="space-y-2 pb-8">
             <p className="text-smoke text-sm font-medium mb-3">
               {results.length} result{results.length !== 1 ? "s" : ""} for &quot;{query}&quot;
@@ -82,12 +100,16 @@ export default function SearchOverlay({ onClose, onMovieSelect }: SearchOverlayP
               <button
                 key={movie.id}
                 onClick={() => { onMovieSelect(movie.id); onClose(); }}
-                className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-ghost transition-colors text-left"
+                className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-ghost transition-colors text-left min-w-0"
               >
-                <img src={movie.poster} alt={movie.title} className="w-10 h-15 object-cover rounded-lg bg-card" style={{ height: "56px" }} />
-                <div>
-                  <p className="text-white font-semibold">{movie.title}</p>
-                  <p className="text-smoke text-sm">{movie.year} • {movie.genres.join(", ")} • ★ {movie.rating}</p>
+                {movie.poster ? (
+                  <img src={movie.poster} alt={movie.title} className="w-10 shrink-0 object-cover rounded-lg bg-card" style={{ height: "56px" }} />
+                ) : (
+                  <div className="w-10 shrink-0 rounded-lg bg-card" style={{ height: "56px" }} />
+                )}
+                <div className="min-w-0">
+                  <p className="text-white font-semibold truncate">{movie.title}</p>
+                  <p className="text-smoke text-sm truncate">{movie.year || "—"} • {movie.genres.join(", ") || "Movie"} • ★ {movie.rating}</p>
                 </div>
               </button>
             ))}
@@ -95,11 +117,10 @@ export default function SearchOverlay({ onClose, onMovieSelect }: SearchOverlayP
         ) : query.length >= 2 ? (
           <div className="text-center py-16">
             <p className="text-smoke text-lg">No results for &quot;{query}&quot;</p>
-            <p className="text-smoke/60 text-sm mt-1">Try a genre or mood instead</p>
+            <p className="text-smoke/60 text-sm mt-1">Try a different title or genre</p>
           </div>
         ) : (
           <div className="pb-8 space-y-8">
-            {/* Popular searches */}
             <div>
               <p className="text-smoke text-xs font-semibold uppercase tracking-widest mb-3">Popular Searches</p>
               <div className="flex flex-wrap gap-2">
@@ -115,7 +136,6 @@ export default function SearchOverlay({ onClose, onMovieSelect }: SearchOverlayP
               </div>
             </div>
 
-            {/* Browse by genre */}
             <div>
               <p className="text-smoke text-xs font-semibold uppercase tracking-widest mb-3">Browse by Genre</p>
               <div className="flex flex-wrap gap-2">
@@ -131,30 +151,34 @@ export default function SearchOverlay({ onClose, onMovieSelect }: SearchOverlayP
               </div>
             </div>
 
-            {/* Trending */}
-            <div>
-              <p className="text-smoke text-xs font-semibold uppercase tracking-widest mb-3">Trending Now</p>
-              <div className="space-y-2">
-                {MOVIES.slice(0, 4).map((m) => (
-                  <button
-                    key={m.id}
-                    onClick={() => { onMovieSelect(m.id); onClose(); }}
-                    className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-ghost transition-colors text-left"
-                  >
-                    <img src={m.poster} alt={m.title} className="w-10 rounded-lg bg-card object-cover" style={{ height: "56px" }} />
-                    <div>
-                      <p className="text-white font-semibold">{m.title}</p>
-                      <p className="text-smoke text-sm">{m.year} • ★ {m.rating}</p>
-                    </div>
-                  </button>
-                ))}
+            {trending.length > 0 && (
+              <div>
+                <p className="text-smoke text-xs font-semibold uppercase tracking-widest mb-3">Trending Now</p>
+                <div className="space-y-2">
+                  {trending.map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => { onMovieSelect(m.id); onClose(); }}
+                      className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-ghost transition-colors text-left min-w-0"
+                    >
+                      {m.poster ? (
+                        <img src={m.poster} alt={m.title} className="w-10 shrink-0 rounded-lg bg-card object-cover" style={{ height: "56px" }} />
+                      ) : (
+                        <div className="w-10 shrink-0 rounded-lg bg-card" style={{ height: "56px" }} />
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-white font-semibold truncate">{m.title}</p>
+                        <p className="text-smoke text-sm truncate">{m.year || "—"} • ★ {m.rating}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* Close hint */}
       <div className="p-4 text-center">
         <button onClick={onClose} className="text-smoke/60 text-sm hover:text-smoke transition-colors">
           Press Esc or tap outside to close

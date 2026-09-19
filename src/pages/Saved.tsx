@@ -1,27 +1,25 @@
-import { MOVIES } from "../data/movies";
+import type { Movie } from "../types";
 import MovieCard from "../components/MovieCard";
 
 interface SavedProps {
-  savedMovies: Set<number>;
+  movies: Movie[];
   onMovieClick: (id: number) => void;
   onToggleSave: (id: number) => void;
 }
 
-export default function Saved({ savedMovies, onMovieClick, onToggleSave }: SavedProps) {
-  const savedList = MOVIES.filter((m) => savedMovies.has(m.id));
-
+export default function Saved({ movies, onMovieClick, onToggleSave }: SavedProps) {
   return (
-    <div className="min-h-screen pt-20 max-w-5xl mx-auto px-4 sm:px-6 pb-28">
+    <div className="min-h-screen pt-20 max-w-5xl mx-auto px-4 sm:px-6 pb-28 min-w-0 w-full">
       <div className="pt-8 pb-8">
         <h1 className="font-display text-3xl sm:text-4xl font-semibold text-white">Watchlist</h1>
         <p className="text-white/40 text-sm mt-1">
-          {savedList.length === 0 ? "Nothing saved yet" : `${savedList.length} movie${savedList.length !== 1 ? "s" : ""}`}
+          {movies.length === 0 ? "Nothing saved yet" : `${movies.length} movie${movies.length !== 1 ? "s" : ""}`}
         </p>
       </div>
 
-      {savedList.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-          {savedList.map((movie) => (
+      {movies.length > 0 ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-5">
+          {movies.map((movie) => (
             <MovieCard
               key={movie.id}
               movie={movie}
@@ -29,7 +27,7 @@ export default function Saved({ savedMovies, onMovieClick, onToggleSave }: Saved
               onToggleSave={onToggleSave}
               isSaved
               showMatch={false}
-              size="md"
+              fluid
             />
           ))}
         </div>

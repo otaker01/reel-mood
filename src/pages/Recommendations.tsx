@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Movie, Filters } from "../types";
-import { STREAMING_LOGOS } from "../data/movies";
+import { fetchMovieDetail, getTrailerEmbedUrl } from "../lib/tmdb";
 import MovieCard from "../components/MovieCard";
+import TrailerLightbox from "../components/TrailerLightbox";
 
 interface RecommendationsProps {
   filters: Filters;
@@ -11,6 +12,7 @@ interface RecommendationsProps {
   onToggleSave: (id: number) => void;
   onMovieClick: (id: number) => void;
   onAdjustFilters: () => void;
+  loading?: boolean;
 }
 
 function getActiveChips(filters: Filters): { label: string; key: string; value: string }[] {
@@ -24,12 +26,20 @@ function getActiveChips(filters: Filters): { label: string; key: string; value: 
 }
 
 export default function Recommendations({
-  filters, setFilters, movies, savedMovies, onToggleSave, onMovieClick, onAdjustFilters,
+  filters, setFilters, movies, savedMovies, onToggleSave, onMovieClick, onAdjustFilters, loading = false,
 }: RecommendationsProps) {
   const [topSaved, setTopSaved] = useState(false);
+  const [showTrailer, setShowTrailer] = useState(false);
+  const [trailerSrc, setTrailerSrc] = useState<string | null>(null);
+  const [trailerLoading, setTrailerLoading] = useState(false);
   const chips = getActiveChips(filters);
   const topMovie = movies[0];
   const moreMovies = movies.slice(1);
+
+  useEffect(() => {
+    setShowTrailer(false);
+    setTrailerSrc(null);
+  }, [topMovie?.id]);
 
   const removeChip = (chip: { key: string; value: string }) => {
     if (chip.key === "moods") setFilters({ ...filters, moods: filters.moods.filter((m) => m !== chip.value) });
@@ -42,10 +52,53 @@ export default function Recommendations({
   const matchColor = (pct: number) =>
     pct >= 90 ? "text-green-400" : pct >= 75 ? "text-yellow-400" : "text-smoke";
 
-  if (!topMovie) return null;
+  const openTrailer = async () => {
+    if (!topMovie) return;
+    const existing = getTrailerEmbedUrl(topMovie);
+    if (existing) {
+      setTrailerSrc(existing);
+      setShowTrailer(true);
+      return;
+    }
+    setTrailerLoading(true);
+    try {
+      const detailed = await fetchMovieDetail(topMovie.id, filters);
+      const embed = getTrailerEmbedUrl(detailed);
+      if (embed) {
+        setTrailerSrc(embed);
+        setShowTrailer(true);
+      }
+    } catch {
+      /* keep the page usable if the trailer cannot load */
+    } finally {
+      setTrailerLoading(false);
+    }
+  };
+
+  if (!topMovie) {
+    if (loading) {
+      return (
+        <div className="min-h-screen pt-28 px-6">
+          <div className="max-w-6xl mx-auto h-[50vh] rounded-3xl bg-card animate-pulse" />
+        </div>
+      );
+    }
+    return (
+      <div className="min-h-screen pt-28 px-6 text-center">
+        <h1 className="font-display text-3xl text-white mb-3">No matches yet</h1>
+        <p className="text-smoke text-sm mb-6">Try adjusting your mood or filters and search again.</p>
+        <button
+          onClick={onAdjustFilters}
+          className="px-5 py-2.5 bg-flame rounded-xl text-white text-sm font-semibold"
+        >
+          Adjust Filters
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen pt-20 max-w-6xl mx-auto px-4 sm:px-6 pb-24">
+    <div className="min-h-screen pt-20 max-w-6xl mx-auto px-4 sm:px-6 pb-24 min-w-0 w-full">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
         <div>
@@ -116,7 +169,7 @@ export default function Recommendations({
             </div>
 
             {/* Info */}
-            <div className="flex-1 p-6 md:p-8">
+            <div className="flex-1 p-5 sm:p-6 md:p-8 min-w-0">
               {/* Match badge */}
               <div className="flex items-center gap-3 mb-4">
                 <span className={`text-3xl font-bold font-display ${matchColor(topMovie.match)}`}>
@@ -126,7 +179,7 @@ export default function Recommendations({
               </div>
 
               <h3
-                className="font-display text-2xl sm:text-3xl font-semibold text-white mb-2 cursor-pointer hover:text-flame transition-colors"
+                className="font-display text-2xl sm:text-3xl font-semibold text-white mb-2 cursor-pointer hover:text-flame transition-colors break-words"
                 onClick={() => onMovieClick(topMovie.id)}
               >
                 {topMovie.title}
@@ -159,11 +212,13 @@ export default function Recommendations({
               {/* Buttons */}
               <div className="flex flex-wrap gap-3 mb-5">
                 <button
-                  onClick={() => onMovieClick(topMovie.id)}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-flame rounded-xl text-white font-semibold text-sm hover:bg-ember transition-colors shadow-lg shadow-flame/20"
+                  type="button"
+                  onClick={openTrailer}
+                  disabled={trailerLoading}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-flame rounded-xl text-white font-semibold text-sm hover:bg-ember transition-colors shadow-lg shadow-flame/20 disabled:opacity-70"
                 >
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                  Watch Trailer
+                  {trailerLoading ? "Loading…" : "Watch Trailer"}
                 </button>
                 <button
                   onClick={() => { onToggleSave(topMovie.id); setTopSaved(!topSaved); }}
@@ -175,22 +230,6 @@ export default function Recommendations({
                 >
                   {savedMovies.has(topMovie.id) ? "Saved ✓" : "+ Save Movie"}
                 </button>
-              </div>
-
-              {/* Streaming */}
-              <div>
-                <p className="text-smoke/60 text-xs font-medium uppercase tracking-widest mb-2">Available on</p>
-                <div className="flex flex-wrap gap-2">
-                  {topMovie.streamingOn.map((s) => {
-                    const info = STREAMING_LOGOS[s];
-                    if (!info) return null;
-                    return (
-                      <span key={s} className={`${info.color} text-white text-xs font-semibold px-3 py-1 rounded-lg`}>
-                        {info.label}
-                      </span>
-                    );
-                  })}
-                </div>
               </div>
             </div>
           </div>
@@ -205,21 +244,29 @@ export default function Recommendations({
           <span className="text-smoke text-sm ml-1">{moreMovies.length} picks</span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-5">
           {moreMovies.map((movie) => (
-            <div key={movie.id} className="relative">
+            <div key={movie.id} className="relative min-w-0">
               <MovieCard
                 movie={movie}
                 onMovieClick={onMovieClick}
                 onToggleSave={onToggleSave}
                 isSaved={savedMovies.has(movie.id)}
                 showMatch
-                size="md"
+                fluid
               />
             </div>
           ))}
         </div>
       </section>
+
+      {showTrailer && trailerSrc && (
+        <TrailerLightbox
+          title={topMovie.title}
+          embedSrc={trailerSrc}
+          onClose={() => setShowTrailer(false)}
+        />
+      )}
     </div>
   );
 }

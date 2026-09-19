@@ -8,6 +8,7 @@ interface MovieCardProps {
   isSaved: boolean;
   showMatch?: boolean;
   size?: "sm" | "md" | "lg";
+  fluid?: boolean;
 }
 
 export default function MovieCard({
@@ -17,12 +18,18 @@ export default function MovieCard({
   isSaved,
   showMatch = true,
   size = "md",
+  fluid = false,
 }: MovieCardProps) {
   const [imgLoaded, setImgLoaded] = useState(false);
   const [showWhy, setShowWhy] = useState(false);
 
-  const width = size === "sm" ? "w-32" : size === "lg" ? "w-52 sm:w-56" : "w-40 sm:w-44";
-  const height = size === "sm" ? "h-48" : size === "lg" ? "h-80 sm:h-84" : "h-60 sm:h-66";
+  const width = fluid
+    ? "w-full min-w-0"
+    : size === "sm"
+      ? "w-28 sm:w-32 shrink-0 snap-start"
+      : size === "lg"
+        ? "w-36 sm:w-48 md:w-52 lg:w-56 shrink-0 snap-start"
+        : "w-32 sm:w-40 md:w-44 shrink-0 snap-start";
 
   const matchColor =
     (movie.match ?? 0) >= 90
@@ -32,9 +39,9 @@ export default function MovieCard({
       : "text-smoke";
 
   return (
-    <div className={`${width} shrink-0 group cursor-pointer`} onClick={() => onMovieClick(movie.id)}>
+    <div className={`relative ${width} group cursor-pointer`} onClick={() => onMovieClick(movie.id)}>
       {/* Poster */}
-      <div className={`relative ${height} rounded-2xl overflow-hidden bg-card`}>
+      <div className="relative aspect-[2/3] w-full rounded-2xl overflow-hidden bg-card">
         {!imgLoaded && <div className="absolute inset-0 skeleton" />}
         <img
           src={movie.poster}
@@ -91,7 +98,7 @@ export default function MovieCard({
       {/* Why this movie tooltip */}
       {showWhy && movie.matchReasons && (
         <div
-          className="absolute z-20 mt-1 p-3 bg-card border border-rim rounded-xl shadow-2xl w-52 text-xs"
+          className="absolute z-20 mt-1 p-3 bg-card border border-rim rounded-xl shadow-2xl w-full max-w-[13rem] text-xs"
           onClick={(e) => e.stopPropagation()}
         >
           <p className="text-smoke font-semibold mb-2 uppercase tracking-wide text-[10px]">Why we picked this</p>
@@ -111,18 +118,18 @@ export default function MovieCard({
       )}
 
       {/* Info below poster */}
-      <div className="mt-2 px-0.5">
+      <div className="mt-2 px-0.5 min-w-0">
         <h3 className="text-white text-sm font-semibold leading-tight truncate group-hover:text-flame transition-colors">
           {movie.title}
         </h3>
-        <div className="flex items-center gap-1.5 mt-0.5">
-          <span className="text-smoke text-xs">{movie.year}</span>
-          <span className="text-rim text-xs">•</span>
-          <span className="text-yellow-400 text-xs">★ {movie.rating}</span>
+        <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+          <span className="text-smoke text-xs shrink-0">{movie.year}</span>
+          <span className="text-rim text-xs shrink-0">•</span>
+          <span className="text-yellow-400 text-xs truncate">★ {movie.rating}</span>
         </div>
         <div className="flex flex-wrap gap-1 mt-1">
           {movie.genres.slice(0, 2).map((g) => (
-            <span key={g} className="text-[10px] text-smoke/80 bg-ghost px-1.5 py-0.5 rounded-md">
+            <span key={g} className="text-[10px] text-smoke/80 bg-ghost px-1.5 py-0.5 rounded-md max-w-full truncate">
               {g}
             </span>
           ))}

@@ -12,6 +12,8 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: process.env.FIGMA_PUBLIC_URL ? `${process.env.FIGMA_PUBLIC_URL}/` : '/',
+    // Expose TMDB_API_KEY from .env to client code (import.meta.env.TMDB_API_KEY)
+    envPrefix: ['VITE_', 'TMDB_'],
     build: {
       sourcemap: emitSourcemaps ? 'inline' : false,
       minify: !emitSourcemaps,

@@ -1,4 +1,6 @@
-import { MOVIES } from "../data/movies";
+import { useState, useEffect } from "react";
+import { fetchTrending } from "../lib/tmdb";
+import type { Movie } from "../types";
 import MovieCard from "../components/MovieCard";
 
 interface ProfileProps {
@@ -15,19 +17,32 @@ const PREFERENCES = [
 ];
 
 export default function Profile({ savedMovies, onMovieClick }: ProfileProps) {
-  const recentlyWatched = MOVIES.slice(0, 6);
-  const favorites = MOVIES.filter((m) => m.rating >= 8.3).slice(0, 4);
+  const [movies, setMovies] = useState<Movie[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchTrending()
+      .then((list) => {
+        if (!cancelled) setMovies(list);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const recentlyWatched = movies.slice(0, 6);
+  const favorites = movies.filter((m) => m.rating >= 7.5).slice(0, 4);
 
   const stats = [
-    { label: "Movies Watched", value: "47" },
+    { label: "Movies Watched", value: String(movies.length || "—") },
     { label: "Saved", value: String(savedMovies.size) },
-    { label: "Avg Rating", value: "8.4" },
+    { label: "Avg Rating", value: movies.length ? (movies.reduce((s, m) => s + m.rating, 0) / movies.length).toFixed(1) : "—" },
     { label: "Fave Genre", value: "Drama" },
   ];
 
   return (
     <div className="min-h-screen pt-20 pb-24">
-      {/* Profile hero */}
       <div
         className="relative h-40 sm:h-52"
         style={{ background: "linear-gradient(135deg, #1a0a1e 0%, #0f1a2e 50%, #180a0a 100%)" }}
@@ -38,15 +53,8 @@ export default function Profile({ savedMovies, onMovieClick }: ProfileProps) {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
-        {/* Avatar + basic info */}
         <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-12 mb-8">
-          <div className="w-24 h-24 rounded-2xl overflow-hidden border-4 border-void shadow-2xl">
-            <img
-              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&auto=format"
-              alt="User avatar"
-              className="w-full h-full object-cover"
-            />
-          </div>
+          <div className="w-24 h-24 rounded-2xl overflow-hidden border-4 border-void shadow-2xl bg-card" />
           <div className="sm:pb-2">
             <h1 className="font-display text-2xl font-semibold text-white">Alex Rivera</h1>
             <p className="text-smoke text-sm mt-0.5">Film lover · Joined 2023</p>
@@ -61,7 +69,6 @@ export default function Profile({ savedMovies, onMovieClick }: ProfileProps) {
           </div>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10">
           {stats.map((stat) => (
             <div key={stat.label} className="bg-card rounded-2xl p-5 border border-rim text-center">
@@ -71,43 +78,44 @@ export default function Profile({ savedMovies, onMovieClick }: ProfileProps) {
           ))}
         </div>
 
-        {/* Recently watched */}
-        <section className="mb-10">
-          <h2 className="text-white font-semibold text-xl mb-5">Recently Watched</h2>
-          <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-3">
-            {recentlyWatched.map((m) => (
-              <MovieCard
-                key={m.id}
-                movie={m}
-                onMovieClick={onMovieClick}
-                onToggleSave={() => {}}
-                isSaved={savedMovies.has(m.id)}
-                showMatch={false}
-                size="md"
-              />
-            ))}
-          </div>
-        </section>
+        {recentlyWatched.length > 0 && (
+          <section className="mb-10">
+            <h2 className="text-white font-semibold text-xl mb-5">Trending Picks</h2>
+            <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-3">
+              {recentlyWatched.map((m) => (
+                <MovieCard
+                  key={m.id}
+                  movie={m}
+                  onMovieClick={onMovieClick}
+                  onToggleSave={() => {}}
+                  isSaved={savedMovies.has(m.id)}
+                  showMatch={false}
+                  size="md"
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
-        {/* Favorites */}
-        <section className="mb-10">
-          <h2 className="text-white font-semibold text-xl mb-5">Favorites</h2>
-          <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-3">
-            {favorites.map((m) => (
-              <MovieCard
-                key={m.id}
-                movie={m}
-                onMovieClick={onMovieClick}
-                onToggleSave={() => {}}
-                isSaved={savedMovies.has(m.id)}
-                showMatch={false}
-                size="md"
-              />
-            ))}
-          </div>
-        </section>
+        {favorites.length > 0 && (
+          <section className="mb-10">
+            <h2 className="text-white font-semibold text-xl mb-5">Highly Rated</h2>
+            <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-3">
+              {favorites.map((m) => (
+                <MovieCard
+                  key={m.id}
+                  movie={m}
+                  onMovieClick={onMovieClick}
+                  onToggleSave={() => {}}
+                  isSaved={savedMovies.has(m.id)}
+                  showMatch={false}
+                  size="md"
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
-        {/* Preferences */}
         <section>
           <h2 className="text-white font-semibold text-xl mb-5">Movie Preferences</h2>
           <div className="bg-card rounded-2xl border border-rim divide-y divide-rim">

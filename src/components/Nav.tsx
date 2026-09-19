@@ -1,4 +1,6 @@
+import type { MouseEvent } from "react";
 import type { Page } from "../types";
+import { hrefFor, isModifiedClick } from "../lib/routing";
 
 interface NavProps {
   page: Page;
@@ -14,28 +16,36 @@ export default function Nav({ page, setPage, onSearch, savedCount }: NavProps) {
     { label: "Categories", id: "categories" },
   ];
 
+  const go = (event: MouseEvent<HTMLAnchorElement>, next: Page) => {
+    if (isModifiedClick(event)) return;
+    event.preventDefault();
+    setPage(next);
+  };
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-rim">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3 min-w-0">
         {/* Logo */}
-        <button
-          onClick={() => setPage("home")}
+        <a
+          href={hrefFor("home")}
+          onClick={(event) => go(event, "home")}
           className="flex items-center gap-2 shrink-0 group"
         >
           <div className="w-8 h-8 rounded-lg bg-flame flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-flame/30">
             R
           </div>
-          <span className="font-display font-semibold text-lg text-white tracking-tight leading-none">
+          <span className="font-display font-semibold text-lg text-white tracking-tight leading-none truncate">
             ReelMood
           </span>
-        </button>
+        </a>
 
         {/* Center nav links — hidden on mobile */}
         <div className="hidden md:flex items-center gap-1">
           {navLinks.map((link) => (
-            <button
+            <a
               key={link.id}
-              onClick={() => setPage(link.id)}
+              href={hrefFor(link.id)}
+              onClick={(event) => go(event, link.id)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 page === link.id
                   ? "text-white bg-ghost"
@@ -43,7 +53,7 @@ export default function Nav({ page, setPage, onSearch, savedCount }: NavProps) {
               }`}
             >
               {link.label}
-            </button>
+            </a>
           ))}
         </div>
 
@@ -60,9 +70,12 @@ export default function Nav({ page, setPage, onSearch, savedCount }: NavProps) {
             </svg>
           </button>
 
-          <button
-            onClick={() => setPage("saved")}
-            className="relative w-9 h-9 rounded-lg flex items-center justify-center text-smoke hover:text-white hover:bg-ghost transition-colors"
+          <a
+            href={hrefFor("saved")}
+            onClick={(event) => go(event, "saved")}
+            className={`relative w-9 h-9 rounded-lg flex items-center justify-center hover:bg-ghost transition-colors ${
+              page === "saved" ? "text-white" : "text-smoke hover:text-white"
+            }`}
             aria-label="Saved movies"
           >
             <svg className="w-5 h-5" fill={page === "saved" ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -73,7 +86,7 @@ export default function Nav({ page, setPage, onSearch, savedCount }: NavProps) {
                 {savedCount > 9 ? "9+" : savedCount}
               </span>
             )}
-          </button>
+          </a>
 
         </div>
       </div>

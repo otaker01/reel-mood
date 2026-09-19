@@ -24,7 +24,7 @@ const SITUATION_CATEGORIES = [
 
 export default function Categories({ onCategorySelect }: CategoriesProps) {
   return (
-    <div className="min-h-screen pt-20 max-w-6xl mx-auto px-4 sm:px-6 pb-24">
+    <div className="min-h-screen pt-20 max-w-6xl mx-auto px-4 sm:px-6 pb-24 min-w-0 w-full">
       <div className="pt-8 pb-10">
         <div className="inline-flex items-center gap-2 bg-flame/10 border border-flame/20 rounded-full px-4 py-1.5 mb-4">
           <span className="text-flame text-sm font-medium">🎭 Browse by mood</span>
@@ -46,7 +46,7 @@ export default function Categories({ onCategorySelect }: CategoriesProps) {
             <button
               key={cat.id}
               onClick={() => onCategorySelect(cat.id)}
-              className={`text-left rounded-3xl p-6 bg-gradient-to-br ${cat.color} border border-rim hover:border-white/20 transition-all duration-200 hover:scale-[1.02] hover:shadow-xl group`}
+              className={`text-left min-w-0 rounded-3xl p-5 sm:p-6 bg-gradient-to-br ${cat.color} border border-rim hover:border-white/20 transition-all duration-200 hover:shadow-xl group`}
             >
               <span className="text-4xl block mb-4">{cat.emoji}</span>
               <h3 className="text-white font-semibold text-lg leading-tight mb-1">{cat.label}</h3>
@@ -66,12 +66,12 @@ export default function Categories({ onCategorySelect }: CategoriesProps) {
           <span className="w-1.5 h-6 bg-flame/50 rounded-full" />
           By Situation
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {SITUATION_CATEGORIES.map((cat) => (
             <button
               key={cat.id}
               onClick={() => onCategorySelect(cat.id)}
-              className="rounded-2xl p-5 bg-card border border-rim hover:border-flame/30 transition-all duration-200 text-center hover:bg-card/80 group"
+              className="min-w-0 rounded-2xl p-4 sm:p-5 bg-card border border-rim hover:border-flame/30 transition-all duration-200 text-center hover:bg-card/80 group"
             >
               <span className="text-3xl block mb-3">{cat.emoji}</span>
               <h3 className="text-white text-sm font-semibold leading-tight mb-1">{cat.label}</h3>

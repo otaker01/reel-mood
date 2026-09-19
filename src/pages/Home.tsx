@@ -72,7 +72,7 @@ export default function Home({ filters, setFilters, onDiscover }: HomeProps) {
     (filters.era ? 1 : 0);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen min-w-0">
       {/* ── Hero ── */}
       <section className="relative min-h-[72vh] flex items-center justify-center overflow-hidden">
         <div
@@ -88,7 +88,7 @@ export default function Home({ filters, setFilters, onDiscover }: HomeProps) {
             <span className="text-flame text-sm font-medium tracking-wide">Mood-based discovery</span>
           </div>
 
-          <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl font-semibold text-white leading-[1.05] mb-5">
+          <h1 className="font-display text-4xl sm:text-6xl lg:text-7xl font-semibold text-white leading-[1.05] mb-5">
             What do you feel<br />
             <em className="italic font-normal text-flame">like watching?</em>
           </h1>
@@ -126,10 +126,10 @@ export default function Home({ filters, setFilters, onDiscover }: HomeProps) {
                 <button
                   key={mood.id}
                   onClick={() => setFilters({ ...filters, moods: toggle(filters.moods, mood.id) })}
-                  className={`relative rounded-2xl p-4 text-left transition-all duration-200 bg-gradient-to-br ${mood.color} ${
+                  className={`relative min-w-0 rounded-2xl p-3 sm:p-4 text-left transition-all duration-200 bg-gradient-to-br ${mood.color} ${
                     active
-                      ? `ring-2 ${mood.ring} scale-[1.03] shadow-lg`
-                      : "ring-1 ring-white/8 hover:ring-white/20 hover:scale-[1.01]"
+                      ? `ring-2 ${mood.ring} shadow-lg`
+                      : "ring-1 ring-white/8 hover:ring-white/20"
                   }`}
                   style={{ backgroundColor: active ? undefined : "rgba(255,255,255,0.03)" }}
                 >
@@ -155,17 +155,17 @@ export default function Home({ filters, setFilters, onDiscover }: HomeProps) {
         {/* Step 2 — Situation */}
         <section className="py-10">
           <StepHeader step={2} title="Who are you watching with?" subtitle="Sets the right tone for your pick." />
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
             {SITUATIONS.map((sit) => {
               const active = filters.situations.includes(sit.id);
               return (
                 <button
                   key={sit.id}
                   onClick={() => setFilters({ ...filters, situations: toggle(filters.situations, sit.id) })}
-                  className={`rounded-2xl py-5 px-3 flex flex-col items-center gap-2.5 transition-all duration-200 ${
+                  className={`min-w-0 rounded-2xl py-4 sm:py-5 px-2 sm:px-3 flex flex-col items-center gap-2.5 transition-all duration-200 ${
                     active
-                      ? "bg-flame/15 ring-2 ring-flame/60 scale-[1.03] shadow-lg shadow-flame/10"
-                      : "bg-white/3 ring-1 ring-white/8 hover:ring-white/20 hover:bg-white/5 hover:scale-[1.01]"
+                      ? "bg-flame/15 ring-2 ring-flame/60 shadow-lg shadow-flame/10"
+                      : "bg-white/3 ring-1 ring-white/8 hover:ring-white/20 hover:bg-white/5"
                   }`}
                 >
                   <span className="text-2xl">{sit.icon}</span>
@@ -190,10 +190,10 @@ export default function Home({ filters, setFilters, onDiscover }: HomeProps) {
                 <button
                   key={e.level}
                   onClick={() => setFilters({ ...filters, energyLevel: active ? 0 : e.level })}
-                  className={`rounded-2xl p-5 text-left transition-all duration-200 ${
+                  className={`min-w-0 rounded-2xl p-4 sm:p-5 text-left transition-all duration-200 ${
                     active
-                      ? "bg-flame/15 ring-2 ring-flame/60 scale-[1.02] shadow-lg shadow-flame/10"
-                      : "bg-white/3 ring-1 ring-white/8 hover:ring-white/20 hover:bg-white/5 hover:scale-[1.01]"
+                      ? "bg-flame/15 ring-2 ring-flame/60 shadow-lg shadow-flame/10"
+                      : "bg-white/3 ring-1 ring-white/8 hover:ring-white/20 hover:bg-white/5"
                   }`}
                 >
                   <span className="text-2xl block mb-2">{e.icon}</span>
@@ -246,14 +246,14 @@ export default function Home({ filters, setFilters, onDiscover }: HomeProps) {
                     <button
                       key={wt.id}
                       onClick={() => setFilters({ ...filters, watchTime: active ? "" : wt.id })}
-                      className={`flex items-center gap-2.5 py-3 px-4 rounded-xl text-sm font-medium transition-all duration-150 ${
+                      className={`flex items-center gap-2.5 py-3 px-3 sm:px-4 rounded-xl text-sm font-medium min-w-0 transition-all duration-150 ${
                         active
-                          ? "bg-flame/15 ring-2 ring-flame/60 text-white scale-[1.02]"
+                          ? "bg-flame/15 ring-2 ring-flame/60 text-white"
                           : "bg-white/3 ring-1 ring-white/8 text-white/60 hover:ring-white/20 hover:text-white"
                       }`}
                     >
-                      <span className="text-base">{wt.icon}</span>
-                      <span>{wt.label}</span>
+                      <span className="text-base shrink-0">{wt.icon}</span>
+                      <span className="leading-tight text-left">{wt.label}</span>
                     </button>
                   );
                 })}
@@ -263,16 +263,16 @@ export default function Home({ filters, setFilters, onDiscover }: HomeProps) {
             {/* Era */}
             <div>
               <p className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-3">Which era?</p>
-              <div className="grid grid-cols-4 gap-2 sm:grid-cols-4">
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {ERAS.map((era) => {
                   const active = filters.era === era.id;
                   return (
                     <button
                       key={era.id}
                       onClick={() => setFilters({ ...filters, era: active ? "" : era.id })}
-                      className={`flex flex-col items-center py-3 px-2 rounded-xl text-center transition-all duration-150 ${
+                      className={`flex flex-col items-center py-3 px-1.5 sm:px-2 rounded-xl text-center min-w-0 transition-all duration-150 ${
                         active
-                          ? "bg-flame/15 ring-2 ring-flame/60 scale-[1.04]"
+                          ? "bg-flame/15 ring-2 ring-flame/60"
                           : "bg-white/3 ring-1 ring-white/8 hover:ring-white/20"
                       }`}
                     >

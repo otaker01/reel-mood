@@ -1,4 +1,6 @@
+import type { MouseEvent } from "react";
 import type { Page } from "../types";
+import { hrefFor, isModifiedClick } from "../lib/routing";
 
 interface MobileNavProps {
   page: Page;
@@ -58,15 +60,29 @@ export default function MobileNav({ page, setPage, onSearch, savedCount }: Mobil
           const isActive = page === item.id;
           const isSearch = (item as { isSearch?: boolean }).isSearch === true;
 
+          if (isSearch) {
+            return (
+              <button
+                key={item.id}
+                onClick={onSearch}
+                className={`relative flex flex-col items-center gap-1 py-2 px-3 rounded-xl transition-colors ${
+                  isActive ? "text-flame" : "text-smoke"
+                }`}
+              >
+                {item.icon(isActive)}
+                <span className="text-[10px] font-medium leading-none">{item.label}</span>
+              </button>
+            );
+          }
+
           return (
-            <button
+            <a
               key={item.id}
-              onClick={() => {
-                if (isSearch) {
-                  onSearch();
-                } else {
-                  setPage(item.id);
-                }
+              href={hrefFor(item.id)}
+              onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+                if (isModifiedClick(event)) return;
+                event.preventDefault();
+                setPage(item.id);
               }}
               className={`relative flex flex-col items-center gap-1 py-2 px-3 rounded-xl transition-colors ${
                 isActive ? "text-flame" : "text-smoke"
@@ -79,7 +95,7 @@ export default function MobileNav({ page, setPage, onSearch, savedCount }: Mobil
                   {savedCount > 9 ? "9+" : savedCount}
                 </span>
               )}
-            </button>
+            </a>
           );
         })}
       </div>
