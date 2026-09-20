@@ -4,6 +4,7 @@ import { defaultFilters } from "./types";
 import { fetchRecommendations, fetchMovieDetail, getCachedMovie, cacheMovies } from "./lib/tmdb";
 import { hrefFor, parseLocation } from "./lib/routing";
 import { loadSavedMovies, persistSavedMovies } from "./lib/storage";
+import { trackPageView } from "./lib/analytics";
 
 import Nav from "./components/Nav";
 import MobileNav from "./components/MobileNav";
@@ -52,6 +53,10 @@ export default function App() {
     persistSavedMovies(savedMovieData);
     cacheMovies(savedMovieData);
   }, [savedMovieData]);
+
+  useEffect(() => {
+    trackPageView();
+  }, [page, selectedMovieId]);
 
   useEffect(() => {
     const onPopState = () => {
